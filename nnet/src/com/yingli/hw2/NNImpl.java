@@ -11,9 +11,9 @@ public class NNImpl{
 	public ArrayList<Node> hiddenNodes=null;//list of the hidden layer nodes
 	public Node outputNodes=null;// list of the output layer nodes
 	
-	public ArrayList<Instance> trainingSet=null;//the training set
+	public Instances trainingSet=null;//the training set
 	
-	Double learningRate=1.0; // variable to store the learning rate
+	double learningRate=1.0; // variable to store the learning rate
 	int maxEpoch=1; // variable to store the maximum number of epochs
 	
 	/**
@@ -22,7 +22,8 @@ public class NNImpl{
  	* After calling the constructor the last node of both inputNodes and  
  	* hiddenNodes will be bias nodes. 
  	*/
-	public NNImpl(ArrayList<Instance> trainingSet, int hiddenNodeCount, Double learningRate, int maxEpoch, Double [][]hiddenWeights, Double[][] outputWeights)
+	public NNImpl(Instances trainingSet, int hiddenNodeCount, double learningRate, int maxEpoch, 
+			double [][]hiddenWeights, double[][] outputWeights)
 	{
 		this.trainingSet=trainingSet;
 		this.learningRate=learningRate;
@@ -30,11 +31,11 @@ public class NNImpl{
 		
 		//input layer nodes
 		inputNodes=new ArrayList<Node>();
-		int inputNodeCount=trainingSet.get(0).attributes.size();
-		int outputNodeCount=trainingSet.get(0).classValues.size();
-		for(int i=0;i<inputNodeCount;i++)
+		int inputNodeCount = trainingSet.get(0).numAttributes()-1;
+		int outputNodeCount = 1;//for this project the output node only have one node
+		for(int i = 0; i < inputNodeCount; i++)
 		{
-			Node node=new Node(0);//input
+			Node node = new Node(0);//type 0 stand for input
 			inputNodes.add(node);
 		}
 		
@@ -44,11 +45,11 @@ public class NNImpl{
 		
 		//hidden layer nodes
 		hiddenNodes=new ArrayList<Node> ();
-		for(int i=0;i<hiddenNodeCount;i++)// i stand for index of hidden node
+		for(int i = 0; i < hiddenNodeCount; i++)// i stand for index of hidden node
 		{
 			Node node=new Node(2);//hidden node
 			//Connecting hidden layer nodes with input layer nodes
-			for(int j=0;j<inputNodes.size();j++)// j stand for index of input
+			for(int j = 0; j < inputNodes.size(); j++)// j stand for index of input
 			{
 				NodeWeightPair nwp=new NodeWeightPair(inputNodes.get(j),hiddenWeights[i][j]);
 				node.parents.add(nwp);
