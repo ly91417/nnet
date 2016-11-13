@@ -94,23 +94,19 @@ public class NNImpl{
 		}
 		int outPutCount = 1;
 		//Output node layer
-		outputNodes = new ArrayList<Node>();
-		// i stand for index of output node
-		for(int i = 0; i < outputNodeCount; i++)
+		Node node=new Node(4);//output
+		Random generator = new Random(hiddenNodeCount);
+		//Connecting output layer nodes with hidden layer nodes
+		for(int j=0;j<hiddenNodes.size();j++)// j stand for index of hidden node
 		{
-			Node node=new Node(4);//output
-			Random generator = new Random(hiddenNodeCount);
-			//Connecting output layer nodes with hidden layer nodes
-			for(int j=0;j<hiddenNodes.size();j++)// j stand for index of hidden node
-			{
-				int number = generator.nextInt(101)-100;
-				double initWt = number / 100.0;
-				NodeWeightPair nwp=
-						new NodeWeightPair(hiddenNodes.get(j), initWt);
-				node.parents.add(nwp);
-			}	
-			outputNodes.add(node);
+			int number = generator.nextInt(101)-100;
+			double initWt = number / 100.0;
+			NodeWeightPair nwp=
+					new NodeWeightPair(hiddenNodes.get(j), outputWeights[i][j]);
+			node.parents.add(nwp);
 		}	
+		outputNodes.add(node);
+		
 	}
 	/**
 	 * getSigmoidalOutput
