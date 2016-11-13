@@ -102,11 +102,10 @@ public class NNImpl{
 			int number = generator.nextInt(101)-100;
 			double initWt = number / 100.0;
 			NodeWeightPair nwp=
-					new NodeWeightPair(hiddenNodes.get(j), outputWeights[i][j]);
+					new NodeWeightPair(hiddenNodes.get(j), initWt);
 			node.parents.add(nwp);
 		}	
 		outputNodes.add(node);
-		
 	}
 	/**
 	 * getSigmoidalOutput
