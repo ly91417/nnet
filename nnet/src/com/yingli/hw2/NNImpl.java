@@ -8,11 +8,12 @@ import weka.core.*;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 public class NNImpl{
-	public ArrayList<Node> mInputNodeList = new ArrayList<Node>();
+	public boolean withHiddenNode = true;
+	public ArrayList<Node> mInputNodeList = new ArrayList<>();
 	//list of the input layer nodes
-	public ArrayList<ArrayList<Node>> inputNodes = new ArrayList<Node>();
+	public ArrayList<ArrayList<Node>> inputNodes = new ArrayList<>();
 	//list of the hidden layer nodes
-	public ArrayList<Node> hiddenNodes = new ArrayList<Node>();
+	public ArrayList<Node> hiddenNodes = new ArrayList<>();
 	//list of the output layer nodes
 	public ArrayList<Node> outputNodes = null;
 	//the training set
@@ -27,26 +28,21 @@ public class NNImpl{
 	 * After calling the constructor the last node of both inputNodes and  
 	 * hiddenNodes will be bias nodes. 
 	 */
-	public NNImpl(Instances trainingSet, int hiddenNodeCount, double learningRate,
-			int maxEpoch, double [][]hiddenWeights, double[][] outputWeights)
-	{
+	public NNImpl(Instances trainingSet, int hiddenNodeCount, double learningRate, int maxEpoch) {
 		this.trainingSet=trainingSet;
 		this.learningRate=learningRate;
 		this.maxEpoch=maxEpoch;
+		if(hiddenNodeCount == 0 ) {
+			withHiddenNode = false;
+		}
 		//how many lists used for input nodes
-		int inputNodeCount = trainingSet.get(0).numAttributes()-1;
-		//for this project the output node only have one node for binary output
-		int outputNodeCount = trainingSet.classAttribute().numValues();
-		//input layer nodes initially set with inputNodeCount number of Nodes 
-		//with the biased node
+		int inputNodeCount = trainingSet.get(0).numAttributes() - 1;
+		//input layer nodes initially set with inputNodeCount number of Nodes with the biased node
 		inputNodes = new ArrayList<ArrayList<Node>>(inputNodeCount + 1);
-		for(int i = 0; i < inputNodeCount; i++) 
-		{
+		for(int i = 0; i < inputNodeCount; i++) {
 			ArrayList<Node> inputNodeList = new ArrayList<Node>();
-			if(trainingSet.attribute(i).isNominal()) 
-			{
-				for(int j = 0 ; j < trainingSet.attribute(i).numValues(); j++) 
-				{
+			if(trainingSet.attribute(i).isNominal()) {
+				for(int j = 0 ; j < trainingSet.attribute(i).numValues(); j++) {
 					Node node = new Node(0);
 					mInputNodeList.add(node);
 					inputNodeList.add(node);
@@ -64,20 +60,19 @@ public class NNImpl{
 		biasToHiddenList.add(biasToHidden);
 		mInputNodeList.add(biasToHidden);
 		inputNodes.add(biasToHiddenList);
-		if(hiddenNodeCount != 0)
-		{
+		if(hiddenNodeCount != 0) {
 			//hidden layer nodes
 			hiddenNodes = new ArrayList<Node> (hiddenNodeCount + 1);
 			// i stand for index of hidden node
 			for(int i = 0; i < hiddenNodeCount; i++)
 			{
 				//hidden node
-				Node node=new Node(2);
+				Node node = new Node(2);
 				Random generator = new Random(hiddenNodeCount);
 				//for each attribute
 				for(int j = 0; j < inputNodes.size(); j++)
 				{	
-					int number = generator.nextInt(101)-100;
+					int number = generator.nextInt(201)-100;
 					double initWt = number / 100.0;
 					//for each value of the attribute
 					for(Node n : inputNodes.get(i)) {
@@ -92,20 +87,27 @@ public class NNImpl{
 			Node biasToOutput=new Node(3);
 			hiddenNodes.add(biasToOutput);
 		}
-		int outPutCount = 1;
 		//Output node layer
 		Node node=new Node(4);//output
 		Random generator = new Random(hiddenNodeCount);
-		//Connecting output layer nodes with hidden layer nodes
-		for(int j=0;j<hiddenNodes.size();j++)// j stand for index of hidden node
-		{
-			int number = generator.nextInt(101)-100;
-			double initWt = number / 100.0;
-			NodeWeightPair nwp=
-					new NodeWeightPair(hiddenNodes.get(j), initWt);
-			node.parents.add(nwp);
-		}	
-		outputNodes.add(node);
+		if(hiddenNodeCount != 0) {
+			//Connecting output layer nodes with hidden layer nodes
+			for(int j = 0;j < hiddenNodes.size(); j++)// j stand for index of hidden node
+			{
+				int number = generator.nextInt(201)-100;
+				double initWt = number / 100.0;
+				NodeWeightPair nwp = new NodeWeightPair(hiddenNodes.get(j), initWt);
+				node.parents.add(nwp);
+			}	
+			outputNodes.add(node);
+		}else {
+			for(Node input :  this.mInputNodeList) {
+				int number = generator.nextInt(201)-100;
+				double initWt = number / 100.0;
+				NodeWeightPair nwp = new NodeWeightPair(input, initWt);
+				node.parents.add(nwp);
+			}
+		}
 	}
 	/**
 	 * getSigmoidalOutput
@@ -120,56 +122,77 @@ public class NNImpl{
 	 * of the outputNodes are [0.1, 0.5, 0.5], it should return 2. 
 	 * The parameter is a single instance. 
 	 */
-
 	public int calculateOutputForInstance(Instance inst)
 	{
-		// TODO: add code here
 		//set up all the input values
-		ArrayList<Double> input = new ArrayList<Double>();
-		double[] instArray = inst.toDoubleArray(); 
-		for(double d : instArray)
-		{
-			input.add(d);
-		}
-		for (int i = 0; i< input.size(); i++) 
-		{
-			inputNodes.get(i).setInput(input.get(i));
-		}
-		for (Node hiddenNode : hiddenNodes) 
-		{
-			hiddenNode.calculateOutput();
-		}
-		for (Node outputNode : outputNodes)
-		{
-			outputNode.calculateOutput();
-		}
-		double [] output = new double[outputNodes.size()];
-		for (int i = 0; i < outputNodes.size(); i++)
-		{
-			output[i] = outputNodes.get(i).getOutput();
-		}
-		double max =-1;
-		int maxIndex =-1;
-		for (int i = 0; i < output.length; i++)
-		{
-			if (output[i] >= max)
-			{
-				max = inst.attributes.get(i);
-				maxIndex = i;
+		for(int i =0 ; i < trainingSet.numAttributes()-1; i++ ) {	
+			//if the attribute is nominal set up the null values 0 and the value in position 1 using 1 of k encoding
+			if(inst.attribute(i).isNominal()) {
+				double in = inst.value(i);
+				int num = inst.numValues();
+				double [] inputDouble = new double[num];
+				inputDouble[(int)in] = 1;
+				List<Node> list = inputNodes.get(i);
+				for(int j = 0 ; j < num; j++ ){
+					list.get(j).setInput(inputDouble[j]);
+				}
 			}
-		} 
-		assert (maxIndex !=-1);
-		return maxIndex;
+			//if it is numerical standardize the input double and then setInput
+			else if(inst.attribute(i).isNumeric()) {
+				double inputDouble = standardizeInput(inst, i);
+				inputNodes.get(i).get(0).setInput(inputDouble);
+			}
+		}
+		if(withHiddenNode) {
+			for(Node hiddenNodeH : hiddenNodes) {
+				hiddenNodeH.calculateOutput();
+			}
+			outputNodes.get(0).calculateOutput();
+		}
+		else {
+			outputNodes.get(0).calculateOutput();
+		}
+		return outputNodes.get(0).getOutput() > 0.5 ? 1:0;
 	}
-
-	public void backPropLearning (ArrayList<Instance> trainingSet, NNImpl network) {
-		int loop =this.maxEpoch;
+	/*
+	 * @param Instance inst
+	 * @param int i
+	 * standardize the numerical value for input
+	 * */
+	private double standardizeInput(Instance inst, int i) {
+		AttributeStats attributeStat = trainingSet.attributeStats(i);
+		double mean = attributeStat.numericStats.mean;
+		double std = attributeStat.numericStats.stdDev;
+		double inputDouble = (inst.value(i) - mean) / std;
+		return inputDouble;
+	}
+	/*
+	 * back-propagation with the neural network
+	 * 
+	 **/
+	public void backPropLearning (Instances trainingSet) {
+		int loop = this.maxEpoch;
 		while (loop>=0) {
+			Instances trainSet = new Instances(trainingSet);
+			Random generator = new Random(loop);
+			trainSet.randomize(generator);;
 			loop--;
-			for (Instance inst : trainingSet) 
-			{
-				ArrayList<Double> input = inst.attributes;
-				for (int i =0; i< input.size(); i++) 
+			for (Instance inst : trainingSet) {
+				double[] inputDouble = inst.toDoubleArray();
+				for(int i = 0 ; i < inputDouble.length; i++) {
+					if(inst.attribute(i).isNominal()) {
+						List<Node> inputNodesList = inputNodes.get(i);
+						for(Node n : inputNodesList){
+							n.setInput(0.0);
+						}
+						inputNodesList.get((int) inputDouble[i]).setInput(1.0);
+					}else if(inst.attribute(i).isNumeric()) {
+						double in = standardizeInput(inst, i);
+						List<Node> inputNodeList = inputNodes.get(i);
+						inputNodeList.get(0).setInput(in);
+					}
+				}
+				for (int i = 0; i< input.size(); i++) 
 				{
 					inputNodes.get(i).setInput(input.get(i));
 				}

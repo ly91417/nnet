@@ -3,8 +3,8 @@ import java.util.*;
 
 public class Node {
 	private int type=0; //0=input,1=biasToHidden,2=hidden,3=biasToOutput,4=Output
-	public ArrayList<NodeWeightPair> parents=null; //Array List that will contain the parents (including the bias node) with weights if applicable
-		 
+	//ArrayList that will contain the parents (including the bias node) with weights if applicable	
+	public ArrayList<NodeWeightPair> parents=null; 
 	private Double inputValue=0.0;
 	private Double outputValue=0.0;
 	private Double sum=0.0; // sum of wi*xi
@@ -50,15 +50,20 @@ public class Node {
 			{
 				// TODO: add code here
 				for (NodeWeightPair np : parents) {
-					if (np.node.type == 1 ||np.node.type == 3 ){
-						sum -= (double) np.weight* np.node.getOutput();
-					}else
-						sum += (double) np.weight* np.node.getOutput();
+					// if (np.node.type == 1 ||np.node.type == 3 ){
+					// 	sum += (double) np.weight* np.node.getOutput();
+					// }else
+					sum += (double) np.weight * np.node.getOutput();
 				}
-				this.outputValue = Math.max(0,sum); 
+				this.outputValue = getSigmoidalOutput(sum); 
 			}
 		}
-
+		/**
+		 * getSigmoidalOutput
+		 */
+		private double getSigmoidalOutput(double value) {
+			return (1.0 / (1.0 + Math.pow(Math.E, -value)));
+		}
 		public double getSum() {
 			return sum;
 		}
