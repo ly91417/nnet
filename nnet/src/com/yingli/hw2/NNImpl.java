@@ -179,6 +179,7 @@ public class NNImpl{
 			loop--;
 			for (Instance inst : trainingSet) {
 				double[] inputDouble = inst.toDoubleArray();
+				//initialize the input nodes
 				for(int i = 0 ; i < inputDouble.length; i++) {
 					if(inst.attribute(i).isNominal()) {
 						List<Node> inputNodesList = inputNodes.get(i);
@@ -192,6 +193,18 @@ public class NNImpl{
 						inputNodeList.get(0).setInput(in);
 					}
 				}
+				if(withHiddenNode){
+					for(int i = 0; i < hiddenNodes.size(); i++) {
+						hiddenNodes.get(i).calculateOutput();
+					}
+					outputNodes.get(0).calculateOutput();
+					
+				}else{
+					outputNodes.get(0).calculateOutput();
+				}
+				
+				double delta = inst.classValue() - outputNodes.get(0).getSum();
+				
 				for (int i = 0; i< input.size(); i++) 
 				{
 					inputNodes.get(i).setInput(input.get(i));
