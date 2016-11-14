@@ -205,6 +205,8 @@ public class NNImpl{
 				
 				double delta = inst.classValue() - outputNodes.get(0).getSum();
 				
+				
+				
 				for (int i = 0; i< input.size(); i++) 
 				{
 					inputNodes.get(i).setInput(input.get(i));
