@@ -172,113 +172,112 @@ public class NNImpl{
 	 **/
 	public void backPropLearning (Instances trainingSet) {
 		int loop = this.maxEpoch;
-		while (loop >= 0) {
-			Instances trainSet = new Instances(trainingSet);
-			Random generator = new Random(loop);
-			trainSet.randomize(generator);;
-			loop--;
-			for (Instance inst : trainingSet) {
-				double[] inputDouble = inst.toDoubleArray();
-				//initialize the input nodes
-				for(int i = 0 ; i < inputDouble.length; i++) {
-					if(inst.attribute(i).isNominal()) {
-						List<Node> inputNodesList = inputNodes.get(i);
-						for(Node n : inputNodesList){
-							n.setInput(0.0);
+		if(withHiddenNode) {
+			while (loop >= 0) {
+				Instances trainSet = new Instances(trainingSet);
+				Random generator = new Random(loop);
+				trainSet.randomize(generator);;
+				loop--;
+				for (Instance inst : trainingSet) {
+					double[] inputDouble = inst.toDoubleArray();
+					//initialize the input nodes
+					for(int i = 0 ; i < inputDouble.length; i++) {
+						if(inst.attribute(i).isNominal()) {
+							List<Node> inputNodesList = inputNodes.get(i);
+							for(Node n : inputNodesList){
+								n.setInput(0.0);
+							}
+							inputNodesList.get((int) inputDouble[i]).setInput(1.0);
+						}else if(inst.attribute(i).isNumeric()) {
+							double in = standardizeInput(inst, i);
+							//standardize the numerical value and then added input value to the node
+							List<Node> inputNodeList = inputNodes.get(i);
+							inputNodeList.get(0).setInput(in);
 						}
-						inputNodesList.get((int) inputDouble[i]).setInput(1.0);
-					}else if(inst.attribute(i).isNumeric()) {
-						double in = standardizeInput(inst, i);
-						//standardize the numerical value and then added input value to the node
-						List<Node> inputNodeList = inputNodes.get(i);
-						inputNodeList.get(0).setInput(in);
 					}
-				}
-				//if hidden node is in 
-				if(withHiddenNode){
 					for(int i = 0; i < hiddenNodes.size(); i++) {
 						hiddenNodes.get(i).calculateOutput();
 					}
 					outputNodes.get(0).calculateOutput();
-				}//else directly compute the output
-				else{
-					outputNodes.get(0).calculateOutput();
-				}
-				double deltaOutput = inst.classValue() - outputNodes.get(0).getSum();
-				
-				
-				
-				for (int i = 0; i< input.size(); i++) 
-				{
-					inputNodes.get(i).setInput(input.get(i));
-				}
-				for (Node hiddenNode : hiddenNodes) 
-				{
-					hiddenNode.calculateOutput();
-				}
-				for (Node outputNode : outputNodes) 
-				{
-					outputNode.calculateOutput();
-				}
-				double [] output = new double[outputNodes.size()];
-				for (int i =0; i < outputNodes.size(); i++) 
-				{
-					output[i] = outputNodes.get(i).getOutput();
-				}
-				double [] deltaOutput = new double[outputNodes.size()];
-				for (int i =0; i< outputNodes.size(); i++) 
-				{
-					double x = outputNodes.get(i).getSum();
-					deltaOutput[i] = (x <= 0? 0:1)*inst.classValues.get(i)-output[i];
-				}
-
-				double [] deltaHidden = new double[hiddenNodes.size()];
-				for (int i=0 ; i < hiddenNodes.size(); i++) 
-				{
-					Node hiddenNode = hiddenNodes.get(i);
-					double wmd=0;
-					for (int j=0; j<outputNodes.size(); j++) 
+					//class lable - output
+					double deltaOutput = inst.classValue() - outputNodes.get(0).getSum();
+					for(Node n : hiddenNodes) {
+						
+					}
+					for (int i = 0; i< input.size(); i++) 
 					{
-						Node outputNode = outputNodes.get(j);
-						List<NodeWeightPair> pairs = outputNode.parents;
-						for (NodeWeightPair np : pairs) 
+						inputNodes.get(i).setInput(input.get(i));
+					}
+					for (Node hiddenNode : hiddenNodes) 
+					{
+						hiddenNode.calculateOutput();
+					}
+					for (Node outputNode : outputNodes) 
+					{
+						outputNode.calculateOutput();
+					}
+					double [] output = new double[outputNodes.size()];
+					for (int i =0; i < outputNodes.size(); i++) 
+					{
+						output[i] = outputNodes.get(i).getOutput();
+					}
+					double [] deltaOutput = new double[outputNodes.size()];
+					for (int i =0; i< outputNodes.size(); i++) 
+					{
+						double x = outputNodes.get(i).getSum();
+						deltaOutput[i] = (x <= 0? 0:1)*inst.classValues.get(i)-output[i];
+					}
+
+					double [] deltaHidden = new double[hiddenNodes.size()];
+					for (int i=0 ; i < hiddenNodes.size(); i++) 
+					{
+						Node hiddenNode = hiddenNodes.get(i);
+						double wmd=0;
+						for (int j=0; j<outputNodes.size(); j++) 
 						{
-							if (np.node.equals(hiddenNode)) 
+							Node outputNode = outputNodes.get(j);
+							List<NodeWeightPair> pairs = outputNode.parents;
+							for (NodeWeightPair np : pairs) 
 							{
-								double temp = np.weight;
-								wmd +=temp*deltaOutput[j];
+								if (np.node.equals(hiddenNode)) 
+								{
+									double temp = np.weight;
+									wmd +=temp*deltaOutput[j];
+								}
 							}
 						}
+						double ini = hiddenNode.getSum();
+						deltaHidden [i] = (ini <=0 ? 0:1) *wmd;
 					}
-					double ini = hiddenNode.getSum();
-					deltaHidden [i] = (ini <=0 ? 0:1) *wmd;
-				}
-				int j=0;
-				for (Node outputNode : outputNodes) 
-				{
-					List<NodeWeightPair> pairs =  outputNode.parents;
-					for (NodeWeightPair pair : pairs) 
+					int j=0;
+					for (Node outputNode : outputNodes) 
 					{
-						pair.weight += learningRate * outputNode.getSum() * deltaOutput[j];//2. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!getSum or getOutput ?????
-					}
-					j++;
-				}
-				int i=0;
-				for (Node hiddenNode : hiddenNodes) 
-				{
-					List<NodeWeightPair> pairs =  hiddenNode.parents;
-					if (pairs!=null) 
-					{ 
+						List<NodeWeightPair> pairs =  outputNode.parents;
 						for (NodeWeightPair pair : pairs) 
 						{
-							pair.weight += learningRate * hiddenNode.getSum() * deltaHidden[i];//3. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!getSum or getOutput ?????\
+							pair.weight += learningRate * outputNode.getSum() * deltaOutput[j];//2. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!getSum or getOutput ?????
 						}
-
+						j++;
 					}
-					i++;
-				}
+					int i=0;
+					for (Node hiddenNode : hiddenNodes) 
+					{
+						List<NodeWeightPair> pairs =  hiddenNode.parents;
+						if (pairs!=null) 
+						{ 
+							for (NodeWeightPair pair : pairs) 
+							{
+								pair.weight += learningRate * hiddenNode.getSum() * deltaHidden[i];//3. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!getSum or getOutput ?????\
+							}
 
+						}
+						i++;
+					}
+
+				}
 			}
+		}else {
+			
 		}	
 	}
 
