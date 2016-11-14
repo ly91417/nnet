@@ -172,7 +172,7 @@ public class NNImpl{
 	 **/
 	public void backPropLearning (Instances trainingSet) {
 		int loop = this.maxEpoch;
-		while (loop>=0) {
+		while (loop >= 0) {
 			Instances trainSet = new Instances(trainingSet);
 			Random generator = new Random(loop);
 			trainSet.randomize(generator);;
@@ -189,21 +189,22 @@ public class NNImpl{
 						inputNodesList.get((int) inputDouble[i]).setInput(1.0);
 					}else if(inst.attribute(i).isNumeric()) {
 						double in = standardizeInput(inst, i);
+						//standardize the numerical value and then added input value to the node
 						List<Node> inputNodeList = inputNodes.get(i);
 						inputNodeList.get(0).setInput(in);
 					}
 				}
+				//if hidden node is in 
 				if(withHiddenNode){
 					for(int i = 0; i < hiddenNodes.size(); i++) {
 						hiddenNodes.get(i).calculateOutput();
 					}
 					outputNodes.get(0).calculateOutput();
-					
-				}else{
+				}//else directly compute the output
+				else{
 					outputNodes.get(0).calculateOutput();
 				}
-				
-				double delta = inst.classValue() - outputNodes.get(0).getSum();
+				double deltaOutput = inst.classValue() - outputNodes.get(0).getSum();
 				
 				
 				
