@@ -6,7 +6,6 @@ package com.yingli.hw2;
  */
 import weka.core.*;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 public class NNImpl{
 	public boolean withHiddenNode = true;
 	public ArrayList<Node> mInputNodeList = new ArrayList<>();
@@ -15,7 +14,7 @@ public class NNImpl{
 	//list of the hidden layer nodes
 	public ArrayList<Node> hiddenNodes = new ArrayList<>();
 	//list of the output layer nodes
-	public ArrayList<Node> outputNodes = null;
+	public ArrayList<Node> outputNodes = new ArrayList<>();
 	//the training set
 	public Instances trainingSet = null;
 	//variable to store the learning rate
@@ -28,7 +27,7 @@ public class NNImpl{
 	 * After calling the constructor the last node of both inputNodes and  
 	 * hiddenNodes will be bias nodes. 
 	 */
-	public NNImpl(Instances trainingSet, int hiddenNodeCount, double learningRate, int maxEpoch) {
+	public NNImpl(Instances trainingSet, double learningRate, int hiddenNodeCount, int maxEpoch) {
 		this.trainingSet=trainingSet;
 		this.learningRate=learningRate;
 		this.maxEpoch=maxEpoch;
@@ -141,10 +140,10 @@ public class NNImpl{
 	/**
 	 *return 0 and 1 standing for the first and last class label
 	 */
-	public int calculateOutputForInstance(Instance inst)
+	public int classify(Instance inst)
 	{
 		//set up all the input values
-		for(int i =0 ; i < trainingSet.numAttributes()-1; i++ ) {	
+		for(int i = 0 ; i < trainingSet.numAttributes() - 1; i++ ) {	
 			//if the attribute is nominal set up the null values 0 and the value in position 1 using 1 of k encoding
 			if(inst.attribute(i).isNominal()) {
 				double in = inst.value(i);
@@ -187,85 +186,109 @@ public class NNImpl{
 	}
 	/*
 	 * back-propagation with the neural network
-	 * 
 	 **/
-	public void backPropLearning (Instances trainingSet) {
+	private void backPropLearning (Instances trainingSet) {
 		int loop = this.maxEpoch;
+		double[] error = new double[loop];
 		if(withHiddenNode){
 			while (loop>=0) {
 				Instances trainSet = new Instances(trainingSet);
 				Random generator = new Random(loop);
 				trainSet.randomize(generator);
-				loop--;
+				
 				for (Instance inst : trainingSet) {
 					double[] inputDouble = inst.toDoubleArray();
 					//initialize the input nodes
 					setInputValues(inst, inputDouble);
-					calculateOutput();
-					updateWeights(inst);	
+					for(int i = 0; i < hiddenNodes.size(); i++) {
+						hiddenNodes.get(i).calculateOutput();
+					}
+					outputNodes.get(0).calculateOutput();
+					updateWeights(inst);
+					error[loop-1] += cross_entropy(inst);
 				}
+				System.out.println("Epoch " + loop + " " + error[loop-1]);
+				loop--;
 			}	
 		}else{
 			while (loop>=0) {
 				Instances trainSet = new Instances(trainingSet);
 				Random generator = new Random(loop);
 				trainSet.randomize(generator);
-				loop--;
+				
 				for (Instance inst : trainingSet) {
 					double[] inputDouble = inst.toDoubleArray();
 					//initialize the input nodes
 					setInputValues(inst, inputDouble);
-					calculateOutput();
+					outputNodes.get(0).calculateOutput();
 					updateWeights(inst);	
+					error[loop] += cross_entropy(inst);
 				}
+				System.out.println("Epoch " + loop+1 + " " + error[loop-1]);
+				loop--;
 			}	
 		}
+	}
+	/**
+	 * return the corss_entropy of the instance
+	 * */
+	private double cross_entropy(Instance inst) {
+		return (-inst.classValue()) * Math.log(outputNodes.get(0).getOutput()) 
+				- (-inst.classValue()) * Math.log(1 - outputNodes.get(0).getOutput());
 	}
 	/*
 	 * 
 	 *set input values for the input nodes
 	 */
 	private void setInputValues(Instance inst, double[] inputDouble) {
-		for(int i = 0 ; i < inputDouble.length; i++) {
+		for(int i = 0 ; i < inputDouble.length-1; i++) {
 			if(inst.attribute(i).isNominal()) {
 				List<Node> inputNodesList = inputNodes.get(i);
 				for(Node n : inputNodesList){
 					n.setInput(0.0);
 				}
-				inputNodesList.get((int) inputDouble[i]).setInput(1.0);
+				int index = (int)inputDouble[i];
+				System.out.println(inputNodesList.size() + " " + index );
+				inputNodesList.get(index).setInput(1.0);
 			}else if(inst.attribute(i).isNumeric()) {
 				double in = standardizeInput(inst, i);
 				List<Node> inputNodeList = inputNodes.get(i);
 				inputNodeList.get(0).setInput(in);
 			}
 		}
-	}
-	private void calculateOutput() {
-		for(int i = 0; i < hiddenNodes.size(); i++) {
-			hiddenNodes.get(i).calculateOutput();
-		}
-		outputNodes.get(0).calculateOutput();
+		
 	}
 	private void updateWeights(Instance inst) {
 		double output = outputNodes.get(0).getOutput();
 		//deltak = ok(1-ok)(tk-ok)
-		//please refer to McGrawHill Machine_learning Mitchell book p98 formula T4.3
+		//refer to McGrawHill Machine_learning Mitchell p98 formula T4.3
 		double deltaK = (inst.classValue() - output) * output * (1 - output);
 		for(NodeWeightPair hnp : outputNodes.get(0).parents ) {
 			Node hiddenN = hnp.node;
-			double hiddenWt = hnp.weight;
-			double hiddenOutput = hiddenN.getOutput();
-			//refer to McGrawHill Machine_learning Mitchell book p98 formula T4.4
-			double deltaH = hiddenOutput * (1- hiddenOutput) * (hiddenWt * deltaK);
-			//refer to McGrawHill Machine_learning Mitchell book p98 formula T4.5
-			double deltaWtji = learningRate * deltaK * hiddenN.getOutput();
-			hiddenWt += deltaWtji;
-			for(NodeWeightPair inp: hiddenN.parents){
-				Node inputN = inp.node;
-				double inputWt = inp.weight;
-				//refer to McGrawHill Machine_learning Mitchell book p98 formula T4.5
-				double deltaWthj = learningRate * deltaH * inputN.getOutput();
-				inputWt += deltaWthj;
+			if(hiddenN.type !=3) {
+				double hiddenWt = hnp.weight;
+				double hiddenOutput = hiddenN.getOutput();
+				//refer to McGrawHill Machine_learning Mitchell p98 formula T4.4
+				double deltaH = hiddenOutput * (1- hiddenOutput) * (hiddenWt * deltaK);
+				//refer to McGrawHill Machine_learning Mitchell p98 formula T4.5
+				double deltaWtji = learningRate * deltaK * hiddenN.getOutput();
+				hiddenWt += deltaWtji;
+				for(NodeWeightPair inp: hiddenN.parents) {
+					Node inputN = inp.node;
+					//refer to McGrawHill Machine_learning Mitchell book p98 formula T4.5
+					double deltaWthj = learningRate * deltaH * inputN.getOutput();
+					inp.weight += deltaWthj;
+				}
+			}else {
+				//TODO need to implement the hiddenNode weight update and need to implement 
+				//weight update without hidden nodes
+				double hiddenWt = hnp.weight;
+				double hiddenOutput = hiddenN.getOutput();
+				//refer to McGrawHill Machine_learning Mitchell p98 formula T4.4
+				double deltaH = hiddenOutput * (1- hiddenOutput) * (hiddenWt * deltaK);
+				//refer to McGrawHill Machine_learning Mitchell p98 formula T4.5
+				double deltaWtji = learningRate * deltaK * hiddenN.getOutput();
+				hiddenWt += deltaWtji;
 			}
 		}
 	}
@@ -279,6 +302,6 @@ public class NNImpl{
 	public void train()
 	{
 		// TODO: add code here
-		backPropLearning(this.trainingSet,this);
+		backPropLearning(this.trainingSet);
 	}
 }

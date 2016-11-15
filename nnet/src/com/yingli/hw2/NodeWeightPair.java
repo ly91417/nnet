@@ -1,8 +1,7 @@
 package com.yingli.hw2;
 public class NodeWeightPair{
 	public Node node; //The parent node
-	public Double weight; //Weight of this connection
-	
+	public Double weight; //Weight of this connection	
 	//Create an object with a given parent node 
 	//and connect weight
 	public NodeWeightPair(Node node, Double weight)
