@@ -19,9 +19,9 @@ public class NNImpl{
 	//the training set
 	public Instances trainingSet = null;
 	//variable to store the learning rate
-	double learningRate=1.0; 
+	private double learningRate = 1.0; 
 	//variable to store the maximum number of epochs
-	int maxEpoch=1; 
+	private int maxEpoch=1; 
 	/**
 	 * This constructor creates the nodes necessary for the neural network
 	 * Also connects the nodes of different layers
@@ -35,6 +35,51 @@ public class NNImpl{
 		if(hiddenNodeCount == 0 ) {
 			withHiddenNode = false;
 		}
+		initializeNetworkWithRandomWeights(trainingSet, hiddenNodeCount);
+	}
+	/**
+	 * initialize the neural network by using randomized weights
+	 * @param Instances trainingSet
+	 * @param int hiddenNodeCount
+	 */
+	private void initializeNetworkWithRandomWeights(Instances trainingSet, int hiddenNodeCount) {
+		initializeInputLayer(trainingSet);
+		initializeHiddenLayer(hiddenNodeCount);
+		initializeOutputLayer(hiddenNodeCount);
+	}
+	/**
+	 * initialize the output layer
+	 * 
+	 * */
+	private void initializeOutputLayer(int hiddenNodeCount) {
+		//Output node layer
+		Node node=new Node(4);
+		Random generator = new Random(hiddenNodeCount);
+		if(withHiddenNode) {
+			//Connecting output layer nodes with hidden layer nodes
+			//j stand for index of hidden node
+			for(int j = 0;j < hiddenNodes.size(); j++) {
+				int number = generator.nextInt(201)-100;
+				double initWt = number / 100.0;
+				NodeWeightPair nwp = new NodeWeightPair(hiddenNodes.get(j), initWt);
+				node.parents.add(nwp);
+			}	
+		}
+		//connecting output layer directly with input layers
+		else {
+			for(Node input :  this.mInputNodeList) {
+				int number = generator.nextInt(201)-100;
+				double initWt = number / 100.0;
+				NodeWeightPair nwp = new NodeWeightPair(input, initWt);
+				node.parents.add(nwp);
+			}
+		}
+		outputNodes.add(node);
+	}
+	/**
+	 * initialize the input layer
+	 * */
+	private void initializeInputLayer(Instances trainingSet) {
 		//how many lists used for input nodes
 		int inputNodeCount = trainingSet.get(0).numAttributes() - 1;
 		//input layer nodes initially set with inputNodeCount number of Nodes with the biased node
@@ -52,6 +97,7 @@ public class NNImpl{
 				mInputNodeList.add(node);
 				inputNodeList.add(node);
 			}
+			//add the list to of the input nodes for certain feature to the list of lists
 			inputNodes.add(inputNodeList);
 		}
 		//bias to hidden
@@ -60,60 +106,37 @@ public class NNImpl{
 		biasToHiddenList.add(biasToHidden);
 		mInputNodeList.add(biasToHidden);
 		inputNodes.add(biasToHiddenList);
-		if(hiddenNodeCount != 0) {
+	}
+	/**
+	 * initialize the hidden layer
+	 * */
+	private void initializeHiddenLayer(int hiddenNodeCount) {
+		if(withHiddenNode) {
 			//hidden layer nodes
+			assert(hiddenNodeCount != 0):"hiddenNodeCount equals 0 and initialize with hidden layer";
 			hiddenNodes = new ArrayList<Node> (hiddenNodeCount + 1);
-			// i stand for index of hidden node
-			for(int i = 0; i < hiddenNodeCount; i++)
-			{
+			//i stand for index of hidden node
+			for(int i = 0; i < hiddenNodeCount; i++) {
 				//hidden node
 				Node node = new Node(2);
 				Random generator = new Random(hiddenNodeCount);
 				//for each attribute
-				for(int j = 0; j < inputNodes.size(); j++)
-				{	
-					int number = generator.nextInt(201)-100;
+				for(int j = 0; j < inputNodes.size(); j++) {	
+					int number = generator.nextInt(201) - 100;
 					double initWt = number / 100.0;
 					//for each value of the attribute
 					for(Node n : inputNodes.get(i)) {
-						NodeWeightPair nwp = 
-								new NodeWeightPair(n,initWt);
+						NodeWeightPair nwp = new NodeWeightPair(n,initWt);
 						node.parents.add(nwp);
 					}
 				}
 				hiddenNodes.add(node);
 			}
 			//bias from hidden to output
+			//type 3 is the bias node from hidden to output
 			Node biasToOutput=new Node(3);
 			hiddenNodes.add(biasToOutput);
 		}
-		//Output node layer
-		Node node=new Node(4);//output
-		Random generator = new Random(hiddenNodeCount);
-		if(hiddenNodeCount != 0) {
-			//Connecting output layer nodes with hidden layer nodes
-			for(int j = 0;j < hiddenNodes.size(); j++)// j stand for index of hidden node
-			{
-				int number = generator.nextInt(201)-100;
-				double initWt = number / 100.0;
-				NodeWeightPair nwp = new NodeWeightPair(hiddenNodes.get(j), initWt);
-				node.parents.add(nwp);
-			}	
-			outputNodes.add(node);
-		}else {
-			for(Node input :  this.mInputNodeList) {
-				int number = generator.nextInt(201)-100;
-				double initWt = number / 100.0;
-				NodeWeightPair nwp = new NodeWeightPair(input, initWt);
-				node.parents.add(nwp);
-			}
-		}
-	}
-	/**
-	 * getSigmoidalOutput
-	 */
-	private static double getSigmoidalOutput(double value) {
-		return (1.0 / (1.0 + Math.pow(Math.E, -value)));
 	}
 	/**
 	 * Get the output from the neural network for a single instance
@@ -124,6 +147,16 @@ public class NNImpl{
 	 */
 	public int calculateOutputForInstance(Instance inst)
 	{
+		if(withHiddenNode) {
+			
+		}
+		
+		
+		
+		
+		
+		
+		
 		//set up all the input values
 		for(int i =0 ; i < trainingSet.numAttributes()-1; i++ ) {	
 			//if the attribute is nominal set up the null values 0 and the value in position 1 using 1 of k encoding
@@ -172,113 +205,83 @@ public class NNImpl{
 	 **/
 	public void backPropLearning (Instances trainingSet) {
 		int loop = this.maxEpoch;
-		while (loop>=0) {
-			Instances trainSet = new Instances(trainingSet);
-			Random generator = new Random(loop);
-			trainSet.randomize(generator);;
-			loop--;
-			for (Instance inst : trainingSet) {
-				double[] inputDouble = inst.toDoubleArray();
-				//initialize the input nodes
-				for(int i = 0 ; i < inputDouble.length; i++) {
-					if(inst.attribute(i).isNominal()) {
-						List<Node> inputNodesList = inputNodes.get(i);
-						for(Node n : inputNodesList){
-							n.setInput(0.0);
-						}
-						inputNodesList.get((int) inputDouble[i]).setInput(1.0);
-					}else if(inst.attribute(i).isNumeric()) {
-						double in = standardizeInput(inst, i);
-						List<Node> inputNodeList = inputNodes.get(i);
-						inputNodeList.get(0).setInput(in);
-					}
+		if(withHiddenNode){
+			while (loop>=0) {
+				Instances trainSet = new Instances(trainingSet);
+				Random generator = new Random(loop);
+				trainSet.randomize(generator);
+				loop--;
+				for (Instance inst : trainingSet) {
+					double[] inputDouble = inst.toDoubleArray();
+					//initialize the input nodes
+					setInputValues(inst, inputDouble);
+					calculateOutput();
+					updateWeights(inst);	
 				}
-				if(withHiddenNode){
-					for(int i = 0; i < hiddenNodes.size(); i++) {
-						hiddenNodes.get(i).calculateOutput();
-					}
-					outputNodes.get(0).calculateOutput();
-					
-				}else{
-					outputNodes.get(0).calculateOutput();
+			}	
+		}else{
+			while (loop>=0) {
+				Instances trainSet = new Instances(trainingSet);
+				Random generator = new Random(loop);
+				trainSet.randomize(generator);
+				loop--;
+				for (Instance inst : trainingSet) {
+					double[] inputDouble = inst.toDoubleArray();
+					//initialize the input nodes
+					setInputValues(inst, inputDouble);
+					calculateOutput();
+					updateWeights(inst);	
 				}
-				
-				double delta = inst.classValue() - outputNodes.get(0).getSum();
-				
-				
-				
-				for (int i = 0; i< input.size(); i++) 
-				{
-					inputNodes.get(i).setInput(input.get(i));
+			}	
+		}
+	}
+	/*
+	 * 
+	 *set input values for the input nodes
+	 */
+	private void setInputValues(Instance inst, double[] inputDouble) {
+		for(int i = 0 ; i < inputDouble.length; i++) {
+			if(inst.attribute(i).isNominal()) {
+				List<Node> inputNodesList = inputNodes.get(i);
+				for(Node n : inputNodesList){
+					n.setInput(0.0);
 				}
-				for (Node hiddenNode : hiddenNodes) 
-				{
-					hiddenNode.calculateOutput();
-				}
-				for (Node outputNode : outputNodes) 
-				{
-					outputNode.calculateOutput();
-				}
-				double [] output = new double[outputNodes.size()];
-				for (int i =0; i < outputNodes.size(); i++) 
-				{
-					output[i] = outputNodes.get(i).getOutput();
-				}
-				double [] deltaOutput = new double[outputNodes.size()];
-				for (int i =0; i< outputNodes.size(); i++) 
-				{
-					double x = outputNodes.get(i).getSum();
-					deltaOutput[i] = (x <= 0? 0:1)*inst.classValues.get(i)-output[i];
-				}
-
-				double [] deltaHidden = new double[hiddenNodes.size()];
-				for (int i=0 ; i < hiddenNodes.size(); i++) 
-				{
-					Node hiddenNode = hiddenNodes.get(i);
-					double wmd=0;
-					for (int j=0; j<outputNodes.size(); j++) 
-					{
-						Node outputNode = outputNodes.get(j);
-						List<NodeWeightPair> pairs = outputNode.parents;
-						for (NodeWeightPair np : pairs) 
-						{
-							if (np.node.equals(hiddenNode)) 
-							{
-								double temp = np.weight;
-								wmd +=temp*deltaOutput[j];
-							}
-						}
-					}
-					double ini = hiddenNode.getSum();
-					deltaHidden [i] = (ini <=0 ? 0:1) *wmd;
-				}
-				int j=0;
-				for (Node outputNode : outputNodes) 
-				{
-					List<NodeWeightPair> pairs =  outputNode.parents;
-					for (NodeWeightPair pair : pairs) 
-					{
-						pair.weight += learningRate * outputNode.getSum() * deltaOutput[j];//2. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!getSum or getOutput ?????
-					}
-					j++;
-				}
-				int i=0;
-				for (Node hiddenNode : hiddenNodes) 
-				{
-					List<NodeWeightPair> pairs =  hiddenNode.parents;
-					if (pairs!=null) 
-					{ 
-						for (NodeWeightPair pair : pairs) 
-						{
-							pair.weight += learningRate * hiddenNode.getSum() * deltaHidden[i];//3. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!getSum or getOutput ?????\
-						}
-
-					}
-					i++;
-				}
-
+				inputNodesList.get((int) inputDouble[i]).setInput(1.0);
+			}else if(inst.attribute(i).isNumeric()) {
+				double in = standardizeInput(inst, i);
+				List<Node> inputNodeList = inputNodes.get(i);
+				inputNodeList.get(0).setInput(in);
 			}
-		}	
+		}
+	}
+	private void calculateOutput() {
+		for(int i = 0; i < hiddenNodes.size(); i++) {
+			hiddenNodes.get(i).calculateOutput();
+		}
+		outputNodes.get(0).calculateOutput();
+	}
+	private void updateWeights(Instance inst) {
+		double output = outputNodes.get(0).getOutput();
+		//deltak = ok(1-ok)(tk-ok)
+		//please refer to McGrawHill Machine_learning Mitchell book p98 formula T4.3
+		double deltaK = (inst.classValue() - output) * output * (1 - output);
+		for(NodeWeightPair hnp : outputNodes.get(0).parents ) {
+			Node hiddenN = hnp.node;
+			double hiddenWt = hnp.weight;
+			double hiddenOutput = hiddenN.getOutput();
+			//refer to McGrawHill Machine_learning Mitchell book p98 formula T4.4
+			double deltaH = hiddenOutput * (1- hiddenOutput) * (hiddenWt * deltaK);
+			//refer to McGrawHill Machine_learning Mitchell book p98 formula T4.5
+			double deltaWtji = learningRate * deltaK * hiddenN.getOutput();
+			hiddenWt += deltaWtji;
+			for(NodeWeightPair inp: hiddenN.parents){
+				Node inputN = inp.node;
+				double inputWt = inp.weight;
+				//refer to McGrawHill Machine_learning Mitchell book p98 formula T4.5
+				double deltaWthj = learningRate * deltaH * inputN.getOutput();
+				inputWt += deltaWthj;
+			}
+		}
 	}
 
 	/**
