@@ -139,24 +139,10 @@ public class NNImpl{
 		}
 	}
 	/**
-	 * Get the output from the neural network for a single instance
-	 * Return the idx with highest output values. For example if the outputs
-	 * of the outputNodes are [0.1, 0.5, 0.2], it should return 1. If outputs
-	 * of the outputNodes are [0.1, 0.5, 0.5], it should return 2. 
-	 * The parameter is a single instance. 
+	 *return 0 and 1 standing for the first and last class label
 	 */
 	public int calculateOutputForInstance(Instance inst)
 	{
-		if(withHiddenNode) {
-			
-		}
-		
-		
-		
-		
-		
-		
-		
 		//set up all the input values
 		for(int i =0 ; i < trainingSet.numAttributes()-1; i++ ) {	
 			//if the attribute is nominal set up the null values 0 and the value in position 1 using 1 of k encoding
